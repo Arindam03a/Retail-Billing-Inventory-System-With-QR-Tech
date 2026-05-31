@@ -1,0 +1,37 @@
+CREATE DATABASE final_project_retail_jan_2026;
+
+USE final_project_retail_jan_2026;
+
+CREATE TABLE cust_details (
+    cust_id INT AUTO_INCREMENT PRIMARY KEY,
+    cust_full_name VARCHAR(255) NOT NULL,
+    cust_address VARCHAR(500) NOT NULL,
+    cust_ph_number BIGINT NOT NULL
+);
+
+CREATE TABLE product_details (
+    p_id INT AUTO_INCREMENT PRIMARY KEY,
+    p_name VARCHAR(255) NOT NULL,
+    p_price DECIMAL(10,2) NOT NULL,
+    stock_in_hand INT NOT NULL
+);
+
+CREATE TABLE audit_table (
+    bill_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    customer_name VARCHAR(255) NOT NULL,
+    total_bill_amount DECIMAL(10,2) NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE BILL_DETAILS_TABLE (
+    SLNO INT AUTO_INCREMENT PRIMARY KEY,
+    BILL_ID INT NOT NULL,
+    C_ID INT NOT NULL,
+    C_NAME VARCHAR(250) NOT NULL,
+    P_ID INT NOT NULL,
+    P_NAME VARCHAR(250) NOT NULL,
+    P_PRICE DECIMAL(10,2) NOT NULL,
+    p_quantity INT NOT NULL,
+    TIMESTAMP DATETIME DEFAULT CURRENT_TIMESTAMP
+);
