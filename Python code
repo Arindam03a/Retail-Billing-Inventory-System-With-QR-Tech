@@ -1,0 +1,244 @@
+import mysql.connector
+import qr_code_scanner
+
+conn_obj = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="YOUR_PASSWORD",
+    database="final_project_retail_jan_2026"
+)
+
+cur_obj = conn_obj.cursor()
+
+# Customer Registration
+def data_entry_cust_details(full_name, address, ph_number):
+    sql = """
+    INSERT INTO cust_details
+    (cust_full_name, cust_address, cust_ph_number)
+    VALUES (%s, %s, %s)
+    """
+
+    data = (full_name, address, ph_number)
+
+    try:
+        cur_obj.execute(sql, data)
+        conn_obj.commit()
+        print("NEW CUSTOMER ENTRY SUCCESSFUL")
+    except mysql.connector.Error as e:
+        print("Error:", e)
+        conn_obj.rollback()
+
+
+# Retrieve Customer
+def data_retrieve_cust_details(ph_number):
+    query = f"""
+    SELECT *
+    FROM cust_details
+    WHERE cust_ph_number={ph_number}
+    """
+
+    try:
+        cur_obj.execute(query)
+        return cur_obj.fetchone()
+    except mysql.connector.Error as e:
+        print("Error:", e)
+        return None
+
+
+# Retrieve Product
+def data_retrieve_product_details(product_id):
+    query = f"""
+    SELECT *
+    FROM product_details
+    WHERE p_id={product_id}
+    """
+
+    try:
+        cur_obj.execute(query)
+        return cur_obj.fetchone()
+    except mysql.connector.Error as e:
+        print("Error:", e)
+        return None
+
+
+# Audit Table Entry
+def data_entry_audit_table(customer_id,
+                           customer_name,
+                           total_bill_amount):
+
+    sql = """
+    INSERT INTO audit_table
+    (customer_id, customer_name, total_bill_amount)
+    VALUES (%s, %s, %s)
+    """
+
+    data = (customer_id,
+            customer_name,
+            total_bill_amount)
+
+    try:
+        cur_obj.execute(sql, data)
+        conn_obj.commit()
+        print("AUDIT TABLE ENTRY SUCCESSFUL")
+    except mysql.connector.Error as e:
+        print("Error:", e)
+        conn_obj.rollback()
+
+
+# Get Latest Bill ID
+def data_retrieve_audit_table():
+
+    query = "SELECT MAX(bill_id) FROM audit_table"
+
+    try:
+        cur_obj.execute(query)
+        return cur_obj.fetchone()
+    except mysql.connector.Error as e:
+        print("Error:", e)
+        return (0,)
+
+
+# Bill Details Table Entry
+def data_entry_bill_details(
+        bill_id,
+        c_id,
+        c_name,
+        p_id,
+        p_name,
+        p_price,
+        quantity):
+
+    sql = """
+    INSERT INTO BILL_DETAILS_TABLE
+    (
+    BILL_ID,
+    C_ID,
+    C_NAME,
+    P_ID,
+    P_NAME,
+    P_PRICE,
+    p_quantity
+    )
+    VALUES (%s,%s,%s,%s,%s,%s,%s)
+    """
+
+    data = (
+        bill_id,
+        c_id,
+        c_name,
+        p_id,
+        p_name,
+        p_price,
+        quantity
+    )
+
+    try:
+        cur_obj.execute(sql, data)
+        conn_obj.commit()
+        print("BILL DETAILS INSERTED")
+    except mysql.connector.Error as e:
+        print("Error:", e)
+        conn_obj.rollback()
+
+
+# Billing Function
+def billing(ph_number):
+
+    total_bill_amount = 0
+
+    cust_details = data_retrieve_cust_details(ph_number)
+
+    latest_bill = data_retrieve_audit_table()
+
+    if latest_bill[0] is None:
+        bill_id = 1
+    else:
+        bill_id = latest_bill[0] + 1
+
+    while True:
+
+        scanned_data = qr_code_scanner.qr_code_scanner()
+
+        product_id = scanned_data.split("-")[0]
+
+        product = data_retrieve_product_details(product_id)
+
+        if product:
+
+            print(product)
+
+            quantity = int(
+                input("Enter quantity: ")
+            )
+
+            amount = float(product[2]) * quantity
+
+            total_bill_amount += amount
+
+            data_entry_bill_details(
+                bill_id,
+                cust_details[0],
+                cust_details[1],
+                product[0],
+                product[1],
+                product[2],
+                quantity
+            )
+
+            print("Amount:", amount)
+            print("Running Bill:", total_bill_amount)
+
+        else:
+            print("Invalid Product")
+
+        stop = input(
+            "Enter s to stop or any key to continue: "
+        ).lower()
+
+        if stop == "s":
+            break
+
+    print("Total Bill:", total_bill_amount)
+
+    data_entry_audit_table(
+        cust_details[0],
+        cust_details[1],
+        total_bill_amount
+    )
+
+
+# Main Program
+ph_number = input(
+    "Enter customer phone number: "
+)
+
+customer = data_retrieve_cust_details(
+    ph_number
+)
+
+if customer:
+
+    print("Existing Customer Found")
+    billing(ph_number)
+
+else:
+
+    print("New Customer Registration")
+
+    full_name = input(
+        "Enter Customer Name: "
+    ).strip().upper()
+
+    address = input(
+        "Enter Address: "
+    ).strip().upper()
+
+    data_entry_cust_details(
+        full_name,
+        address,
+        ph_number
+    )
+
+    billing(ph_number)
+
+conn_obj.close()
